@@ -1,0 +1,121 @@
+/**
+ *@NApiVersion 2.0
+ *@NScriptType ScheduledScript
+ */
+ define(['N/search', 'N/record', 'N/email', 'N/runtime', 'N/file'],
+ function (search, record, email, runtime, file) {
+     function execute(context) {
+         log.debug("Execute");
+         //load the bill
+
+         var scriptObj = runtime.getCurrentScript();
+         var searchP = scriptObj.getParameter({ name: 'custscript_save_search' });
+
+         try {
+             var csvFile = file.create({
+                 name: 'data.csv',
+                 contents: 'Internal Id ,ENTITY ID,IS PERSON,DATE CREATED,INACTIVE\n',
+                 folder: 700,
+                 fileType: 'CSV'
+             });
+             /* // Add the data
+              csvFile.appendLine({
+                 value: 'Internl Id,ENTITY ID,IS PERSON,DEFAULT ADDRESS,DATE CREATED,IS INACTIVE'
+             });
+              */
+
+             recordObj = search.load(searchP)
+
+             var recurcObj = recordObj.run().getRange({
+                 start: 0,
+                 end: 100
+             });
+             log.debug({
+                 title: 'filtered Result : ',
+                 details: recurcObj
+             });
+             for (x in recurcObj) {
+
+
+                 var id = recurcObj[x]["id"];
+                 var recurcObjrecord = record.load({
+                     type: record.Type.VENDOR,
+                     id: id
+                 });
+                 function isNotEmpty(value) {
+                     if (value != null && value != 'undefined' && value != undefined && value != '' && value != NaN && value != 'NaN' && value != '- None -'&& value!=true)
+                         return true;
+                     else
+                         return false;
+                 }
+                 var id = isNotEmpty(id) ? id : "NA";
+                 rid=" ";
+                 if(isNotEmpty(recurcObjrecord.getText("entityid"))){
+                    rids=recurcObjrecord.getText("entityid").toString().split(",",10)
+                    
+                    for(i=0;i<rids.length;i++){
+                      rid=rid+" "+rids[i];
+                    }
+                 }
+                 else{
+                    rid="NA";
+                 }
+                
+                 isps=" ";
+                 if(isNotEmpty(recurcObjrecord.getText("isperson"))){
+                    isp=recurcObjrecord.getText("isperson").toString().split(",",10)
+                    
+                    for(i=0;i<isp.length;i++){
+                        isps=isps+" "+isp[i];
+                    }
+                 }
+                 else{
+                    isps="NA";
+                 }
+                 dcs=" ";
+                 if(isNotEmpty(recurcObjrecord.getText("datecreated"))){
+                    dc=(recurcObjrecord.getText("datecreated")).toString().split(",",10)
+                    
+                    for(i=0;i<dc.length;i++){
+                        dcs=dcs+" "+dc[i];
+                    }
+                 }
+                 else{
+                    dcs="NA";
+                 }
+                 isns=" ";
+                 if(isNotEmpty(recurcObjrecord.getText("isinactive"))){
+                    isn=recurcObjrecord.getText("isinactive").toString().split(",",10)
+                    
+                    for(i=0;i<isn.length;i++){
+                        isns=isns+isn[i];
+                    }
+                 }
+                 else{
+                    isns="NA";
+                 }
+
+                 var isn = isNotEmpty(recurcObjrecord.getValue("isinactive")) ? recurcObjrecord.getValue("isinactive") : "NA";
+
+                 var r = id + "," + rid + "," + isps + "," + dcs + ","+ isns+"\n";
+
+                 csvFile.appendLine({
+                     value: r
+                 });
+                 log.debug({
+                     title: 'key ID : ' + id,
+                     details: recurcObjrecord
+                 });
+
+
+             }
+         } catch (e) {
+             log.error(e.name + "  : <<<  message -->>>: " + e.message)
+         }
+         var csvFileId = csvFile.save();
+     }
+     return {
+         execute: execute
+     };
+ }
+); 
